@@ -11,7 +11,23 @@ export default function Home(){
  const load=async()=>{if(!db)return;const [p,m,r]=await Promise.all([db.from('personnel').select('*').eq('active',true).order('full_name'),db.from('attendance').select('*').gte('work_date',month+'-01').lt('work_date',nextMonth(month)),db.from('profiles').select('role').eq('id',(await db.auth.getUser()).data.user?.id||'').maybeSingle()]);if(p.error||m.error||r.error)setMsg([p.error?.message,m.error?.message,r.error?.message].filter(Boolean).join('; '));setPeople(p.data||[]);setMarks(m.data||[]);setRole(r.data?.role||'viewer')};
  useEffect(()=>{if(!db)return;db.auth.getUser().then(({data})=>setUser(data.user));const {data:{subscription}}=db.auth.onAuthStateChange((_event,s)=>setUser(s?.user||null));return()=>subscription.unsubscribe()},[]);
  useEffect(()=>{if(user)load()},[user,month]);
- useEffect(()=>{if(!user||!db)return;const channel=db.channel('attendance-sync').on('postgres_changes',{event:'*',schema:'public',table:'attendance'},()=>load()).subscribe();return()=>{db.removeChannel(channel)}},[user,month]);
+ useEffect(() => {
+  const client = db;
+  if (!user || !client) return;
+
+  const channel = client
+    .channel('attendance-sync')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'attendance' },
+      () => load()
+    )
+    .subscribe();
+
+  return () => {
+    void client.removeChannel(channel);
+  };
+}, [user, month]);
  const canEdit=['admin','editor'].includes(role);const selected=useMemo(()=>new Map(marks.filter(m=>m.work_date===date).map(m=>[m.person_id,m])),[marks,date]);
  async function login(e:React.FormEvent){e.preventDefault();if(!db)return;const {error}=await db.auth.signInWithPassword({email,password});setMsg(error?.message||'Đã đăng nhập');}
  async function update(person_id:string,status:string){if(!db||!canEdit)return;const existing=selected.get(person_id);const {error}=await db.from('attendance').upsert({person_id,work_date:date,status,hours:status==='LV'||status==='CT'||status==='TB'?8:0,note:existing?.note||'',updated_by:user?.id},{onConflict:'person_id,work_date'});setMsg(error?.message||'Đã lưu');await load()}
