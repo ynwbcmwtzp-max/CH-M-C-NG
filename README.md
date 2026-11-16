@@ -13,9 +13,21 @@ Không đưa dữ liệu cán bộ thật lên GitHub hoặc Supabase/Vercel khi
 4. Trên MacBook có Node.js: `npm install`, tạo `.env.local` dựa trên `.env.example`, sau đó `npm run dev` để chạy thử.
 5. Trong trang ứng dụng, tài khoản admin thêm cán bộ thử nghiệm, tài khoản editor chấm công. Xuất báo cáo từ các nút tương ứng.
 
-## Ghi chú nghiệp vụ
-- Mã trạng thái thử nghiệm: LV làm việc, CT công tác, H học, P phép, TS thai sản, N nghỉ, TB trực ban, K khác.
-- Bản thử nghiệm gán 8 giờ mặc định cho LV/CT/TB; **đây là giả định kỹ thuật**, không phải quy định được xác nhận từ biểu mẫu. Cần thiết kế nhập giờ làm thực tế và kiểm chứng điều kiện hưởng trước khi dùng tính tiền ăn.
-- Báo cáo T9 hiện chỉ là bảng tổng hợp minh họa; không tự suy ra mức hưởng hoặc căn cứ pháp lý.
-- Để khớp hoàn toàn ba tệp Excel gốc cần bổ sung logic tính, vị trí ô, merge, border, font, chữ ký, tổng hợp và kiểm thử từng biểu mẫu.
-- Nếu không được phép dùng dịch vụ đám mây, không triển khai bản này với dữ liệu thật; chuyển sang hạ tầng được đơn vị phê duyệt.
+## Danh mục và quy tắc chấm công
+- 11 trạng thái: TTKS, XLVPHC, CT, H, P, TS, N (Nghỉ T7, CN), NB, BENH, TH, NL.
+- Chỉ TTKS được tính ngày làm việc. Khi chọn TTKS, mặc định lưu 8 giờ; trạng thái khác lưu 0 giờ.
+- Bảng ngày ghi X cho TTKS, để trống ô ngày XLVPHC. Các cột tổng hợp đếm riêng từng trạng thái, không cộng XLVPHC vào ngày làm việc.
+- Định lượng chỉ xét TTKS: từ 4 giờ ghi X; trên 0 đến dưới 4 giờ ghi 1/2. Giữ cách chia theo giờ của báo cáo hiện có.
+- T9 chỉ đánh dấu và đếm ngày TTKS; không tự điền mức hưởng.
+- LV, TB, K cũ vẫn giữ nguyên, hiển thị là dữ liệu cũ và không tự quy đổi thành TTKS. Không cập nhật hàng loạt dữ liệu chấm công.
+- Danh mục có trên giao diện và một sheet riêng trong cả ba báo cáo. Bố cục báo cáo vẫn là bảng cơ bản, chưa tái tạo mẫu Excel gốc.
+
+## Cập nhật dự án đang có dữ liệu
+1. Kiểm tra trực tiếp ràng buộc `attendance_status_check` trong Supabase có khớp schema trong kho không.
+2. Chạy `supabase/migrations/20261116_attendance_statuses.sql` trước khi triển khai giao diện mới. Migration chỉ mở rộng mã được phép, giữ các mã cũ, không UPDATE/DELETE dữ liệu và không đổi phân quyền. Nếu tên ràng buộc khác, dừng và đối chiếu trước khi chạy.
+3. Không chạy lại `supabase/schema.sql` trên dự án đã có dữ liệu; file này chỉ dành cho dự án trống.
+4. Sau migration, triển khai bản sửa trên Vercel, kiểm tra đăng nhập, danh mục và xuất báo cáo. Không tạo dữ liệu thử vào bảng chấm công thật.
+
+## Kiểm tra
+- Node.js 22.6+ để chạy `npm test` (kiểm tra 11 trạng thái, mã cũ, mốc giờ, ba báo cáo và ranh giới tháng).
+- `npm run build` kiểm tra bản dựng Next.js và TypeScript.
